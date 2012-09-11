@@ -1,13 +1,34 @@
 from django.contrib import admin
-from models import Question, Topic
-            
+from models import Question, Topic, Faq
+
+class QuestionInlineAdmin(admin.TabularInline):
+    model = Question
+    fields = ('text', 'position', 'status', )
+    # define the sortable
+    sortable_field_name = "position"
+    extra = 0
+
 class TopicAdmin(admin.ModelAdmin):
-    prepopulated_fields = {'slug':('name',)}
+    list_display = ('name', )
+    prepopulated_fields = {"slug": ("name",)} 
+    
+    inlines = [QuestionInlineAdmin]
+
+class TopicInlineAdmin(admin.TabularInline):
+    model = Topic
+    fields = ('name', 'position', )
+    # define the sortable
+    sortable_field_name = "position"
+    extra = 0
+
+class FaqAdmin(admin.ModelAdmin):
+    list_display = ('name', )
+    prepopulated_fields = {"slug": ("name",)} 
+    
+    inlines = [TopicInlineAdmin]
     
 class QuestionAdmin(admin.ModelAdmin):
-    list_display = ['text', 'sort_order', 'created_by', 'created_on',
-                    'updated_by', 'updated_on', 'status']
-    list_editable = ['sort_order', 'status']
+    prepopulated_fields = {"slug": ("text",)} 
 
     def save_model(self, request, obj, form, change): 
         '''
@@ -25,6 +46,8 @@ class QuestionAdmin(admin.ModelAdmin):
 
         # Let the superclass do the final saving.
         return super(QuestionAdmin, self).save_model(request, obj, form, change)
-        
+
+admin.site.register(Faq, FaqAdmin)
+admin.site.register(Topic, TopicAdmin)        
 admin.site.register(Question, QuestionAdmin)
-admin.site.register(Topic, TopicAdmin)
+

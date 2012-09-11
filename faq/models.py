@@ -5,14 +5,25 @@ from django.contrib.auth.models import User
 from django.template.defaultfilters import slugify
 from managers import QuestionManager
 
+class Faq(models.Model):
+    name = models.CharField(_('name'), max_length=150)
+    slug = models.SlugField(_('slug'), max_length=150)
+    
+    class Meta:
+        verbose_name = _("FAQ")
+        verbose_name_plural = _("FAQ's")
+
+    def __unicode__(self):
+        return self.name
+
 class Topic(models.Model):
     """
     Generic Topics for FAQ question grouping
     """
     name = models.CharField(_('name'), max_length=150)
     slug = models.SlugField(_('slug'), max_length=150)
-    sort_order = models.IntegerField(_('sort order'), default=0,
-        help_text=_('The order you would like the topic to be displayed.'))
+    faq = models.ForeignKey(Faq, verbose_name=_('faq'), related_name='topics')
+    position = models.PositiveSmallIntegerField(_('sort order'), default=0, help_text=_('The order you would like the topic to be displayed.'))
 
     def get_absolute_url(self):
         return '/faq/' + self.slug
@@ -20,7 +31,7 @@ class Topic(models.Model):
     class Meta:
         verbose_name = _("Topic")
         verbose_name_plural = _("Topics")
-        ordering = ['sort_order', 'name']
+        ordering = ['position', 'name']
 
     def __unicode__(self):
         return self.name
@@ -48,43 +59,24 @@ class Question(models.Model):
     protected = models.BooleanField(_('is protected'), default=False,
         help_text=_("Set true if this question is only visible by authenticated users."))
         
-    sort_order = models.IntegerField(_('sort order'), default=0,
+    position = models.PositiveSmallIntegerField(_('sort order'), default=0,
         help_text=_('The order you would like the question to be displayed.'))
 
-    created_on = models.DateTimeField(_('created on'), default=datetime.datetime.now)
-    updated_on = models.DateTimeField(_('updated on'))
-    created_by = models.ForeignKey(User, verbose_name=_('created by'),
-        null=True, related_name="+")
-    updated_by = models.ForeignKey(User, verbose_name=_('updated by'),
-        null=True, related_name="+")  
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, verbose_name=_('created by'), null=True, related_name="+")
+    updated_by = models.ForeignKey(User, verbose_name=_('updated by'), null=True, related_name="+")  
     
     objects = QuestionManager()
     
     class Meta:
         verbose_name = _("Frequent asked question")
         verbose_name_plural = _("Frequently asked questions")
-        ordering = ['sort_order', 'created_on']
+        ordering = ['position', 'created']
+
 
     def __unicode__(self):
         return self.text
-
-    def save(self, *args, **kwargs):
-        # Set the date updated.
-        self.updated_on = datetime.datetime.now()
-        
-        # Create a unique slug, if needed.
-        if not self.slug:
-            suffix = 0
-            potential = base = slugify(self.text[:90])
-            while not self.slug:
-                if suffix:
-                    potential = "%s-%s" % (base, suffix)
-                if not Question.objects.filter(slug=potential).exists():
-                    self.slug = potential
-                # We hit a conflicting slug; increment the suffix and try again.
-                suffix += 1
-        
-        super(Question, self).save(*args, **kwargs)
 
     def is_header(self):
         return self.status == Question.HEADER

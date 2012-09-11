@@ -34,7 +34,7 @@ class TopicList(ListView):
         # with an "updated_on" field). So this magic is the price we pay for
         # being generic.
         last_updated = (data['object_list']
-                            .annotate(updated=Max('questions__updated_on'))
+                            .annotate(updated=Max('questions__updated'))
                             .aggregate(Max('updated')))
         
         data.update({'last_updated': last_updated['updated__max']})
@@ -55,7 +55,7 @@ class TopicDetail(DetailView):
         data = super(TopicDetail, self).get_context_data(**kwargs)
         data.update({
             'questions': qs,
-            'last_updated': qs.aggregate(updated=Max('updated_on'))['updated'],
+            'last_updated': qs.aggregate(updated=Max('updated'))['updated'],
         })
         return data
 
